@@ -1,0 +1,52 @@
+<?php
+
+/**
+* Implements hook_schema()
+*/
+function serempre_schema() {
+
+	$schema['serempre_task'] = array(
+	    'description' => 'This is a table for my custom module',
+	    'fields' => array(
+		    	'uid' => array(
+			        'description' => 'Identificador de la tabla.',
+			        'type' => 'serial',
+			        'unsigned' => TRUE,
+			        'not null' => TRUE
+	    		),
+				'name' => array(
+					'description' => 'Name',
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'default' => ''
+				),
+				'identification' => array(
+					'description' => 'Identification',
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'default' => ''
+				),
+				'date' => array(
+					'description' => 'Born date',
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'default' => ''
+				),
+			),
+	    'primary key' => array('uid'),
+  	);
+
+  	return $schema;
+}
+
+
+/**
+* Implements hook_uninstall()
+*/
+function serempre_uninstall() {
+
+    node_type_delete('serempre_task');
+}

@@ -1,0 +1,185 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function serempre_menu() {
+
+	$items = array();
+
+	$items['serempre/tarea'] = array(
+	    'title' => 'Anotador de tareas',
+	    'description' => 'testing',
+	    'page callback' => 'drupal_get_form',
+	    'page arguments' => array('serempre_form'),
+	    'access callback' => 'user_access',
+	    'access arguments' => array('Permisos Serempre'),
+    );
+    $items['list/task'] = array(
+	    'page callback' => 'lista_resultados',
+	    'page arguments' => array(),
+	    'type' => MENU_CALLBACK,
+	    'access callback' => TRUE,
+    );
+      $items['borrar/%'] = array(
+        'title' => 'Borrar tarea',
+	    'page callback' => 'borrar_tareas',
+	    'page arguments' => array(1),
+	    'access arguments' => array('Permisos Serempre'),
+  	);
+   $items['editar/%'] = array(
+        'title' => 'Editar tarea',
+	    'page callback' => 'editar_tareas',
+	    'page arguments' => array(1),
+	    'access arguments' => array('Permisos Serempre'),
+  	);
+  return $items;
+
+}
+
+/*
+ * Implements hook_form().
+ */
+function serempre_form($form, &$form_state) {
+
+  $form['item'] = array(
+		'#type' => 'markup',
+    '#prefix' => '<div class="content-dev">',
+    '#markup' => l('Ver listas de tareas', 'list/task'),
+    '#sufix' => '</div>',
+  );
+	$form['username'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Tarea'),
+		'#attributes'=> array('Placeholder' => t('Enter your Username')),
+		'#size' => 60,
+		'#maxlength' => 60,
+		'#required' => TRUE,
+	);
+	$form['identification'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Observación'),
+		'#attributes'=> array('Placeholder' => t("Enter your Identification")),
+		'#size' => 60,
+		'#maxlength' => 60,
+		'#required' => TRUE,
+	);
+	$form['date'] = array(
+		'#type' => 'date',
+		'#title' => t('Fecha'),
+		'#description' => t('You can select your born date displaying each list'),
+        '#required' => TRUE,
+	);
+	$form['submit'] = array(
+	    '#type' => 'submit',
+	    '#value' => t('ENVIAR'),
+  	);
+
+	return $form;
+}
+
+function serempre_form_submit($form, &$form_state) {
+
+	$observation = $form_state['values']['identification'];
+	$task           = $form_state['values']['username'];
+	$month 			= $form_state['values']['date']['month'];
+	$day 			= $form_state['values']['date']['day'];
+	$year 			= $form_state['values']['date']['year'];
+	$date 			= $day.'-'.$month.'-'.$year;
+
+	$nid = db_insert('serempre_task') -> fields(
+    	array(
+			'name'           => $task,
+			'identification' => $observation,
+			'date'           => $date,
+    	)
+  	)-> execute();
+
+	if ($nid) {
+		drupal_set_message(t('Registro OK'));
+		// drupal_goto('<front>');
+	}
+}
+
+function lista_resultados() {
+  $salida = '';
+  $salida = l('Agregar una nueva tarea', 'serempre/tarea');
+
+  $header = array('Id', 'Tarea', 'Observación', 'Fecha', 'Editar', 'Borrar');
+  $query = db_select('serempre_task', 'base');
+  $query->fields('base', array('uid', 'name', 'identification', 'date'))
+    ->orderBy('base.uid');
+  $r = $query->execute();
+
+  $rows = array();
+  foreach($r as $res) {
+    $rows[]=array(
+      check_plain($res->uid),
+      check_plain($res->name),
+      check_plain($res->identification),
+      check_plain($res->date),
+      l('Editar', 'editar/'.$res->uid),
+      l('Borrar', 'borrar/'.$res->uid),
+    );
+  }
+  $salida .=theme('table', array('header'=>$header, 'rows'=>$rows));
+  return($salida);
+
+}
+
+function borrar_tareas($x) {
+  db_delete('serempre_task')
+  ->condition('uid', $x)
+  ->execute();
+  drupal_set_message('Tarea borrado');
+  drupal_goto('list/task');
+}
+
+function editar_tareas($x) {
+  return drupal_get_form('editar_formulario');
+}
+
+function editar_formulario($form, &$form_state) {
+  $query=db_select('serempre_task', 'b')
+  ->fields('b')
+  ->condition('uid', arg(1), '=');
+  $query=$query->execute()->fetchAssoc();
+  $form=array();
+    $form['item'] = array(
+		'#type' => 'markup',
+    '#prefix' => '<div class="content-dev">',
+    '#markup' => l('Ver listas de tareas', 'list/task'),
+    '#sufix' => '</div>',
+  );
+  $form['name']=array(
+    '#title' => ('Tarea'),
+    '#type' => 'textfield',
+    '#description' => (''),
+    '#required' => TRUE,
+    '#value' => $query['name'],
+    '#size' => 60,
+  );
+  $form['identification']=array(
+    '#title' => ('Observación'),
+    '#type' => 'textfield',
+    '#description' => (''),
+    '#required' => TRUE,
+    '#value' => $query['identification'],
+    '#size' => 60,
+  );
+  $form['submit']=array(
+    '#type' => 'submit',
+    '#value' => 'Actualizar',
+  );
+
+  return $form;
+}
+
+function editar_formulario_submit($form, &$form_state) {
+  db_update('serempre_task')
+  ->fields(array('name' => $form_state['input']['name'], 'identification' => $form_state['input']['identification']))
+  ->condition('uid', arg(1), '=' )
+  ->execute();
+  drupal_set_message('Registro actualizado');
+  drupal_goto('list/task');
+}
